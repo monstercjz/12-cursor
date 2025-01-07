@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网站导航</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="title-container">
+            <h1 id="mainTitle" class="editable-title">我的网站导航</h1>
+        </div>
+        
+        <!-- 添加新的浮动按钮 -->
+        <div class="floating-buttons">
+            <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>
+            <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
+            <button class="floating-button export-data" onclick="exportData()" data-tooltip="导出数据"></button>
+            <input type="file" id="importFile" style="display: none" onchange="importData(event)">
+            <button class="floating-button import-data" onclick="document.getElementById('importFile').click()" data-tooltip="导入数据"></button>
+        </div>
+
+        <!-- 添加提示框容器 -->
+        <div id="toastContainer"></div>
+
+        <!-- 添加网站表单 -->
+        <div class="add-form" id="addForm" style="display: none;">
+            <select id="groupSelect">
+                <!-- 分组选项将通过 JavaScript 动态添加 -->
+            </select>
+            <input type="text" id="siteName" placeholder="网站名称">
+            <input type="text" id="siteUrl" placeholder="网站地址">
+            <input type="text" id="siteDesc" placeholder="网站描述">
+            <button onclick="addSite()">保存</button>
+            <button onclick="toggleAddForm()" class="cancel-btn">取消</button>
+        </div>
+
+        <!-- 添加分组表单 -->
+        <div class="add-group-form" id="addGroupForm" style="display: none;">
+            <input type="text" id="groupName" placeholder="分组名称">
+            <button onclick="addGroup()">保存分组</button>
+            <button onclick="hideAddGroupForm()" class="cancel-btn">取消</button>
+        </div>
+
+        <!-- 网站列表 -->
+        <div class="sites-container" id="sitesList"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
