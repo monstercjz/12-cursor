@@ -440,6 +440,21 @@ button:hover {
     vertical-align: middle;
 }
 
+.search-container {
+    max-width: 600px;
+    margin: 0 auto 30px;
+    display: flex;
+    gap: 10px;
+}
+
+.search-container input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: white;
+}
+
 @media (prefers-color-scheme: dark) {
     body {
         background: linear-gradient(135deg, #1a1c1e 0%, #2d3436 100%);
@@ -520,4 +535,24 @@ button:hover {
     .floating-button {
         background: #45a049;
     }
+}
+
+/* 搜索框样式优化 */
+.search-container {
+    max-width: 600px;
+    margin: 0 auto 30px;
+    display: flex;
+    gap: 10px;
+}
+
+.search-container input,
+.search-container select {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: white;
+}
+
+.search-container input {
+    flex: 1;
 } 

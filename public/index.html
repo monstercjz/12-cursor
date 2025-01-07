@@ -12,6 +12,16 @@
             <h1 id="mainTitle" class="editable-title">我的网站导航</h1>
         </div>
         
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="搜索网站...">
+            <select id="searchFilter">
+                <option value="all">全部</option>
+                <option value="name">名称</option>
+                <option value="url">地址</option>
+                <option value="description">描述</option>
+            </select>
+        </div>
+
         <!-- 添加新的浮动按钮 -->
         <div class="floating-buttons">
             <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>

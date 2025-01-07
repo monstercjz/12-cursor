@@ -296,6 +296,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadSites();
 
+    // 添加搜索功能
+    const searchInput = document.getElementById('searchInput');
+    const searchFilter = document.getElementById('searchFilter');
+    
+    searchInput.addEventListener('input', () => {
+        filterSites(searchInput.value, searchFilter.value);
+    });
+    
+    searchFilter.addEventListener('change', () => {
+        filterSites(searchInput.value, searchFilter.value);
+    });
+    
     // 添加快捷键支持
     document.addEventListener('keydown', handleKeyboard);
     
@@ -603,6 +615,22 @@ async function handleDrop(e) {
     displaySites();
 }
 
+// 添加搜索功能
+function addSearchBar() {
+    const searchHTML = `
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="搜索网站...">
+            <select id="searchFilter">
+                <option value="all">全部</option>
+                <option value="name">名称</option>
+                <option value="url">地址</option>
+                <option value="description">描述</option>
+            </select>
+        </div>
+    `;
+    document.querySelector('.title-container').insertAdjacentHTML('afterend', searchHTML);
+}
+
 // 添加虚拟滚动
 function createVirtualScroll() {
     const container = document.getElementById('sitesList');
@@ -674,6 +702,10 @@ async function importData(event) {
 
 // 快捷键处理
 function handleKeyboard(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+    }
     if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
         toggleAddForm();
