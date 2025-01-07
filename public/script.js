@@ -2,22 +2,6 @@ let sites = [];
 let groups = [];
 let pageTitle = "我的网站导航";
 
-// 添加缓存支持
-const cache = {
-    set: (key, value) => {
-        localStorage.setItem(key, JSON.stringify(value));
-    },
-    get: (key) => {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
-    }
-};
-
-// 添加离线支持
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-}
-
 // 从服务器获取数据
 async function loadSites() {
     try {
@@ -204,9 +188,15 @@ function createSiteElement(site) {
         siteElement.className = 'site-item';
         siteElement.innerHTML = `
         <a href="${site.url}" target="_blank" class="site-link" data-site-index="${sites.indexOf(site)}">
-            <img class="site-favicon" src="https://www.google.com/s2/favicons?domain=${site.url}" alt="icon">
-            <span class="site-name">${site.name}</span>
+            ${site.name}
+            <div class="tooltip">
+                <div class="tooltip-content">
+                    <div>${site.description ? `<strong>描述:</strong> ${site.description}` : ''}</div>
+                    <div><strong>地址:</strong> ${site.url}</div>
+                </div>
+            </div>
         </a>
+        <button class="delete-btn" onclick="deleteSite(${sites.indexOf(site)})">删除</button>
     `;
     return siteElement;
 }
@@ -295,24 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     loadSites();
-
-    // 添加搜索功能
-    const searchInput = document.getElementById('searchInput');
-    const searchFilter = document.getElementById('searchFilter');
-    
-    searchInput.addEventListener('input', () => {
-        filterSites(searchInput.value, searchFilter.value);
-    });
-    
-    searchFilter.addEventListener('change', () => {
-        filterSites(searchInput.value, searchFilter.value);
-    });
-    
-    // 添加快捷键支持
-    document.addEventListener('keydown', handleKeyboard);
-    
-    // 初始化懒加载
-    initializeLazyLoading();
 });
 
 // 保存标题
@@ -613,158 +585,4 @@ async function handleDrop(e) {
     
     await saveSites();
     displaySites();
-}
-
-// 添加搜索功能
-function addSearchBar() {
-    const searchHTML = `
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="搜索网站...">
-            <select id="searchFilter">
-                <option value="all">全部</option>
-                <option value="name">名称</option>
-                <option value="url">地址</option>
-                <option value="description">描述</option>
-            </select>
-        </div>
-    `;
-    document.querySelector('.title-container').insertAdjacentHTML('afterend', searchHTML);
-}
-
-// 添加虚拟滚动
-function createVirtualScroll() {
-    const container = document.getElementById('sitesList');
-    let visibleItems = [];
-    
-    function updateVisibleItems() {
-        const containerRect = container.getBoundingClientRect();
-        visibleItems = sites.filter(site => {
-            const element = document.querySelector(`[data-site-index="${sites.indexOf(site)}"]`);
-            if (!element) return false;
-            const rect = element.getBoundingClientRect();
-            return rect.top < containerRect.bottom && rect.bottom > containerRect.top;
-        });
-    }
-    
-    container.addEventListener('scroll', updateVisibleItems);
-}
-
-// 添加懒加载
-function lazyLoadImages() {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                observer.unobserve(img);
-            }
-        });
-    });
-
-    document.querySelectorAll('.site-favicon[data-src]').forEach(img => {
-        observer.observe(img);
-    });
-}
-
-// 添加导入/导出功能
-function exportData() {
-    const data = JSON.stringify({sites, groups, title: pageTitle}, null, 2);
-    const blob = new Blob([data], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'navigation-backup.json';
-    a.click();
-    showToast('数据导出成功', 'success');
-}
-
-async function importData(event) {
-    try {
-        const file = event.target.files[0];
-        const text = await file.text();
-        const data = JSON.parse(text);
-        
-        if (data.sites && data.groups) {
-            sites = data.sites;
-            groups = data.groups;
-            pageTitle = data.title || pageTitle;
-            await saveSites();
-            displaySites();
-            showToast('数据导入成功', 'success');
-        } else {
-            throw new Error('无效的数据格式');
-        }
-    } catch (error) {
-        showToast('导入失败：' + error.message, 'error');
-    }
-    event.target.value = '';
-}
-
-// 快捷键处理
-function handleKeyboard(e) {
-    if (e.ctrlKey && e.key === 'f') {
-        e.preventDefault();
-        document.getElementById('searchInput').focus();
-    }
-    if (e.ctrlKey && e.key === 'n') {
-        e.preventDefault();
-        toggleAddForm();
-    }
-}
-
-// 提示框功能
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    document.getElementById('toastContainer').appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
-// 懒加载初始化
-function initializeLazyLoading() {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                if (img.dataset.src) {
-                    img.src = img.dataset.src;
-                    delete img.dataset.src;
-                }
-                observer.unobserve(img);
-            }
-        });
-    });
-
-    function observeImages() {
-        document.querySelectorAll('.site-favicon[data-src]').forEach(img => {
-            observer.observe(img);
-        });
-    }
-
-    // 监听DOM变化，为新添加的图片添加懒加载
-    new MutationObserver(observeImages).observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-}
-
-// 添加分组折叠功能
-function toggleGroup(groupIndex) {
-    const groupContainer = document.querySelector(`[data-group-index="${groupIndex}"]`);
-    const siteList = groupContainer.querySelector('.site-list');
-    siteList.style.display = siteList.style.display === 'none' ? 'grid' : 'none';
-}
-
-// 添加拖拽排序动画
-function addDragAnimation() {
-    const draggable = new Sortable(document.querySelector('.sites-container'), {
-        animation: 150,
-        ghostClass: 'site-item-ghost',
-        onEnd: async ({oldIndex, newIndex}) => {
-            const site = sites.splice(oldIndex, 1)[0];
-            sites.splice(newIndex, 0, site);
-            await saveSites();
-        }
-    });
 } 

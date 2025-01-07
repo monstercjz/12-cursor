@@ -12,27 +12,11 @@
             <h1 id="mainTitle" class="editable-title">我的网站导航</h1>
         </div>
         
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="搜索网站...">
-            <select id="searchFilter">
-                <option value="all">全部</option>
-                <option value="name">名称</option>
-                <option value="url">地址</option>
-                <option value="description">描述</option>
-            </select>
-        </div>
-
         <!-- 添加新的浮动按钮 -->
         <div class="floating-buttons">
             <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>
             <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
-            <button class="floating-button export-data" onclick="exportData()" data-tooltip="导出数据"></button>
-            <input type="file" id="importFile" style="display: none" onchange="importData(event)">
-            <button class="floating-button import-data" onclick="document.getElementById('importFile').click()" data-tooltip="导入数据"></button>
         </div>
-
-        <!-- 添加提示框容器 -->
-        <div id="toastContainer"></div>
 
         <!-- 添加网站表单 -->
         <div class="add-form" id="addForm" style="display: none;">
