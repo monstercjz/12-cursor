@@ -202,17 +202,9 @@ function displaySites() {
 function createSiteElement(site) {
         const siteElement = document.createElement('div');
         siteElement.className = 'site-item';
-    
-    // 从URL中获取域名
-    const domain = new URL(site.url).hostname;
-    
         siteElement.innerHTML = `
         <a href="${site.url}" target="_blank" class="site-link" data-site-index="${sites.indexOf(site)}">
-            <img class="site-favicon" 
-                src="/api/favicon/${domain}"
-                onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${site.name[0].toUpperCase()}</text></svg>'"
-                alt="${site.name[0]}"
-            >
+            <img class="site-favicon" src="https://www.google.com/s2/favicons?domain=${site.url}" alt="icon">
             <span class="site-name">${site.name}</span>
         </a>
     `;
