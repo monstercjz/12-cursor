@@ -11,15 +11,14 @@ async function loadSites() {
         groups = data.groups || [];
         pageTitle = data.title || "我的网站导航";
         
-        // 添加数据迁移
-        migrateVisitData();
+        // 清理重复数据
+        cleanupSites();
         
         updateGroupSelect();
         displaySites();
         document.getElementById('mainTitle').textContent = pageTitle;
     } catch (error) {
-        console.error('加载数据失败:', error);
-        alert('加载数据失败，请检查服务器是否运行');
+        handleError(error, '加载数据');
     }
 }
 
@@ -88,45 +87,41 @@ function updateGroupSelect() {
 
 // 添加网站
 async function addSite() {
-    const name = document.getElementById('siteName').value.trim();
-    let url = document.getElementById('siteUrl').value.trim();
-    const description = document.getElementById('siteDesc').value.trim();
-    const groupSelect = document.getElementById('groupSelect');
-    const groupIndex = groupSelect.value ? parseInt(groupSelect.value) : undefined;
-    
-    if (!name || !url) {
-        alert('请填写网站名称和地址！');
-        return;
+    try {
+        const name = document.getElementById('siteName').value;
+        let url = document.getElementById('siteUrl').value;
+        const description = document.getElementById('siteDesc').value;
+        const groupSelect = document.getElementById('groupSelect');
+        const groupIndex = groupSelect.value ? parseInt(groupSelect.value) : undefined;
+        
+        const validated = validateSiteInput(name, url, description);
+        
+        const icon = await getFavicon(validated.url);
+        
+        sites.push({
+            ...validated,
+            groupIndex,
+            icon,
+            stats: {
+                visitCount: 0,
+                lastVisit: null
+            }
+        });
+        
+        await saveSites();
+        displaySites();
+        toggleAddForm();
+        
+        // 清空表单
+        document.getElementById('siteName').value = '';
+        document.getElementById('siteUrl').value = '';
+        document.getElementById('siteDesc').value = '';
+        groupSelect.value = '';
+        
+        showToast('添加网站成功', 'success');
+    } catch (error) {
+        handleError(error, '添加网站');
     }
-    
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-    }
-    
-    // 获取网站图标
-    const icon = await getFavicon(url);
-    
-    sites.push({
-        name,
-        url,
-        description,
-        groupIndex,
-        icon,
-        stats: {
-            visitCount: 0,
-            lastVisit: null
-        }
-    });
-    
-    await saveSites();
-    displaySites();
-    toggleAddForm();
-    
-    // 清空表单
-    document.getElementById('siteName').value = '';
-    document.getElementById('siteUrl').value = '';
-    document.getElementById('siteDesc').value = '';
-    groupSelect.value = '';
 }
 
 // 删除网站
@@ -139,10 +134,10 @@ async function deleteSite(index) {
 // 显示网站列表
 function displaySites() {
     const sitesList = document.getElementById('sitesList');
-    sitesList.innerHTML = '';
+    const fragment = document.createDocumentFragment();
     
     // 显示未分组的网站
-    const ungroupedSites = sites.filter(site => site.groupIndex === undefined || site.groupIndex === null);
+    const ungroupedSites = sites.filter(site => site.groupIndex === undefined);
     if (ungroupedSites.length > 0) {
         const ungroupedContainer = document.createElement('div');
         ungroupedContainer.className = 'no-group-container';
@@ -156,7 +151,7 @@ function displaySites() {
         });
         
         ungroupedContainer.appendChild(siteList);
-        sitesList.appendChild(ungroupedContainer);
+        fragment.appendChild(ungroupedContainer);
     }
     
     // 显示分组的网站
@@ -185,11 +180,15 @@ function displaySites() {
             
             groupContainer.appendChild(groupHeader);
             groupContainer.appendChild(siteList);
-            sitesList.appendChild(groupContainer);
+            fragment.appendChild(groupContainer);
         }
     });
 
     addDragListeners();
+    
+    // 最后一次性更新DOM
+    sitesList.innerHTML = '';
+    sitesList.appendChild(fragment);
 }
 
 // 创建网站元素的辅助函数
@@ -657,41 +656,48 @@ function addSearchBar() {
 
 // 添加导入导出功能
 async function exportData(format = 'json') {
-    const data = {
-        sites,
-        groups,
-        pageTitle,
-        exportDate: new Date().toISOString()
-    };
-    
-    let exportContent;
-    let mimeType;
-    let fileExt;
-    
-    switch (format) {
-        case 'csv':
-            exportContent = sitesToCSV(data.sites);
-            mimeType = 'text/csv';
-            fileExt = 'csv';
-            break;
-        case 'markdown':
-            exportContent = sitesToMarkdown(data);
-            mimeType = 'text/markdown';
-            fileExt = 'md';
-            break;
-        default:
-            exportContent = JSON.stringify(data, null, 2);
-            mimeType = 'application/json';
-            fileExt = 'json';
+    showToast('正在准备导出...', 'info');
+    try {
+        const data = {
+            sites,
+            groups,
+            pageTitle,
+            exportDate: new Date().toISOString()
+        };
+        
+        let exportContent;
+        let mimeType;
+        let fileExt;
+        
+        switch (format) {
+            case 'csv':
+                exportContent = sitesToCSV(data.sites);
+                mimeType = 'text/csv';
+                fileExt = 'csv';
+                break;
+            case 'markdown':
+                exportContent = sitesToMarkdown(data);
+                mimeType = 'text/markdown';
+                fileExt = 'md';
+                break;
+            default:
+                exportContent = JSON.stringify(data, null, 2);
+                mimeType = 'application/json';
+                fileExt = 'json';
+        }
+        
+        const blob = new Blob([exportContent], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `navigation_backup_${new Date().toISOString().split('T')[0]}.${fileExt}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('导出成功！', 'success');
+    } catch (error) {
+        showToast('导出失败：' + error.message, 'error');
     }
-    
-    const blob = new Blob([exportContent], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `navigation_backup_${new Date().toISOString().split('T')[0]}.${fileExt}`;
-    a.click();
-    URL.revokeObjectURL(url);
 }
 
 function sitesToCSV(sites) {
@@ -838,31 +844,48 @@ document.addEventListener('click', (e) => {
 
 // 导入数据功能
 async function importData(event) {
+    showToast('正在导入...', 'info');
     try {
         const file = event.target.files[0];
         if (!file) return;
         
-        const text = await file.text();
-        const data = JSON.parse(text);
+        const content = await file.text();
+        const data = JSON.parse(content);
         
-        if (!data.sites || !Array.isArray(data.sites)) {
-            throw new Error('无效的数据格式');
+        // 数据格式验证
+        if (!isValidImportData(data)) {
+            throw new Error('数据格式不正确');
         }
         
         sites = data.sites;
-        groups = data.groups || ['默认分组'];
-        pageTitle = data.pageTitle || '我的网站导航';
+        groups = data.groups || [];
+        pageTitle = data.title || "我的网站导航";
         
         await saveSites();
         displaySites();
         document.getElementById('mainTitle').textContent = pageTitle;
         
-        alert('数据导入成功！');
+        showToast(`成功导入 ${data.sites.length} 个网站`, 'success');
     } catch (error) {
-        alert('导入失败：' + error.message);
+        showToast('导入失败：' + error.message, 'error');
     } finally {
         event.target.value = ''; // 清空文件选择
     }
+}
+
+function isValidImportData(data) {
+    // 基本结构检查
+    if (!data || !Array.isArray(data.sites)) {
+        return false;
+    }
+    
+    // 网站数据检查
+    return data.sites.every(site => {
+        return site.name && 
+                site.url && 
+                typeof site.url === 'string' &&
+                (!site.groupIndex || Number.isInteger(site.groupIndex));
+    });
 }
 
 // 修改快捷键监听
@@ -903,7 +926,7 @@ document.addEventListener('keydown', (e) => {
 // 更新快捷键帮助显示
 function showShortcutsHelp() {
     const helpHTML = `
-        <div class="shortcuts-help">
+        <div class="shortcuts-help modal-center">
             <h3>键盘快捷键</h3>
             <ul>
                 <li><kbd>Ctrl/⌘</kbd> + <kbd>/</kbd> 显示此帮助</li>
@@ -912,10 +935,19 @@ function showShortcutsHelp() {
                 <li><kbd>Alt</kbd> + <kbd>G</kbd> 添加分组</li>
                 <li><kbd>Esc</kbd> 关闭弹出层</li>
             </ul>
-            <button onclick="this.parentElement.remove()">关闭</button>
+            <button onclick="closeShortcutsHelp()">关闭</button>
         </div>
+        <div class="modal-overlay" onclick="closeShortcutsHelp()"></div>
     `;
     document.body.insertAdjacentHTML('beforeend', helpHTML);
+}
+
+// 添加关闭快捷键帮助的函数
+function closeShortcutsHelp() {
+    const helpDialog = document.querySelector('.shortcuts-help');
+    const overlay = document.querySelector('.modal-overlay');
+    if (helpDialog) helpDialog.remove();
+    if (overlay) overlay.remove();
 }
 
 // 修改访问统计功能
@@ -1138,4 +1170,55 @@ function getTagColor(tag) {
         '学习': '#E91E63'
     };
     return tagColors[tag] || '#757575';
+}
+
+// 添加提示组件
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// 数据清理和去重
+function cleanupSites() {
+    const seen = new Set();
+    const uniqueSites = sites.filter(site => {
+        const key = `${site.url}-${site.groupIndex}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+    
+    if (uniqueSites.length !== sites.length) {
+        sites = uniqueSites;
+        saveSites();
+        showToast('已清理重复网站', 'info');
+    }
+}
+
+// 统一的错误处理
+function handleError(error, operation = '操作') {
+    console.error(`${operation}失败:`, error);
+    showToast(`${operation}失败：${error.message || '请检查网络连接'}`, 'error');
+}
+
+// 输入验证
+function validateSiteInput(name, url, description) {
+    if (!name.trim()) {
+        throw new Error('网站名称不能为空');
+    }
+    
+    try {
+        new URL(url.startsWith('http') ? url : 'https://' + url);
+    } catch {
+        throw new Error('请输入有效的网址');
+    }
+    
+    return {
+        name: name.trim(),
+        url: url.trim(),
+        description: description.trim()
+    };
 } 

@@ -26,10 +26,26 @@ app.get('/api/sites', (req, res) => {
     res.json(JSON.parse(data));
 });
 
+// 数据验证中间件
+function validateData(req, res, next) {
+    const data = req.body;
+    if (!data || !Array.isArray(data.sites)) {
+        return res.status(400).json({ error: '无效的数据格式' });
+    }
+    next();
+}
+
 // 保存网站数据
-app.post('/api/sites', (req, res) => {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(req.body));
-    res.json({ success: true });
+app.post('/api/sites', validateData, (req, res) => {
+    try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ 
+            error: '保存失败',
+            message: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 });
 
 // 添加访问统计API
