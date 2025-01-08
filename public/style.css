@@ -451,9 +451,104 @@ button:hover {
     font-weight: bold;
 }
 
+.floating-button.theme-toggle::after {
+    content: "🎨";
+    font-size: 20px;
+}
+
+.theme-menu {
+    position: fixed;
+    right: 100px;
+    bottom: 30px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    display: none;
+    z-index: 1000;
+}
+
+.theme-menu.show {
+    display: block;
+}
+
+.theme-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.theme-option:hover {
+    background-color: #f5f5f5;
+}
+
+.theme-icon {
+    font-size: 16px;
+    display: inline-block;
+    width: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* 主题图标样式 */
+.theme-option:first-child .theme-icon {
+    color: #ff9800;  /* 浅色模式图标颜色 */
+}
+
+.theme-option:nth-child(2) .theme-icon {
+    color: #4CAF50;  /* 深色模式图标颜色 */
+}
+
+.theme-option:last-child .theme-icon {
+    color: #2196F3;  /* 系统模式图标颜色 */
+}
+
 @media (prefers-color-scheme: dark) {
-    body {
+    body:not([data-theme="light"]) {
         background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    h1 {
+        color: #ffffff;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    input, select {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    .floating-button {
+        background: #2d6930;
+    }
+    
+    .search-container input {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    .group-container {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+    }
+    
+    .group-header {
+        background: #252525;
+    }
+    
+    .group-title {
+        color: #ffffff;
+    }
+    
+    .tooltip-content {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
         color: #ffffff;
     }
     
@@ -461,7 +556,147 @@ button:hover {
         background: #2d2d2d;
         border: 1px solid #3d3d3d;
     }
-} 
+
+    .title-edit-form,
+    .site-edit-form,
+    .group-edit-form {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+        color: #fff;
+    }
+    
+    .site-item:hover {
+        background: linear-gradient(to right, #2d2d2d, #353535);
+    }
+    
+    button:hover {
+        background-color: #2d6930;
+    }
+
+    .theme-menu {
+        background: #2d2d2d;
+        border: 1px solid #3d3d3d;
+        color: #ffffff;
+    }
+
+    .theme-option:hover {
+        background-color: #353535;
+    }
+}
+
+body[data-theme="dark"] {
+    background: #121212;
+    color: #ffffff;
+    
+    /* 分组标题文字颜色 */
+    .group-title {
+        color: #7B8CDE;  /* 使用柔和的蓝紫色 */
+        font-weight: 500;
+    }
+    
+    /* 所有网站容器通用样式 */
+    .site-item, .group-container, .no-group-container {
+        background: #1e1e1e;
+        border-color: #3d3d3d;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+    
+    /* 网站项目悬浮效果 */
+    .site-item:hover {
+        background: #2a2a2a;
+        border-color: rgba(123, 140, 222, 0.5);  /* 使用半透明的蓝紫色 */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    }
+    
+    /* 分组容器样式 */
+    .group-container {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #2d2d2d;
+    }
+    
+    /* 分组标题样式 */
+    .group-header {
+        background: #252525;
+        border-bottom: 1px solid rgba(123, 140, 222, 0.3);  /* 更淡的蓝紫色分隔线 */
+        color: #ffffff;
+        padding: 15px 20px;
+    }
+    
+    /* 分组名称样式 */
+    h3 {
+        color: rgba(255, 255, 255, 0.9);  /* 稍微降低标题对比度 */
+        font-size: 1.1em;
+        letter-spacing: 0.5px;
+    }
+    
+    /* 未分组区域样式 */
+    .no-group-container {
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .no-group-container .site-list {
+        background: transparent;
+    }
+    
+    /* 主题切换菜单样式 */
+    .theme-menu {
+        background: #1e1e1e;
+        border: 1px solid #3d3d3d;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    }
+    
+    .theme-option:hover {
+        background-color: #2a2a2a;
+    }
+
+    /* 搜索框样式 */
+    .search-container input {
+        background: #1e1e1e;
+        border-color: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    /* 输入框通用样式 */
+    input, select, textarea {
+        background: #1e1e1e;
+        border-color: #3d3d3d;
+        color: #ffffff;
+    }
+    
+    /* 弹窗样式 */
+    .title-edit-form,
+    .site-edit-form,
+    .group-edit-form {
+        background: #1e1e1e;
+        border-color: #3d3d3d;
+        color: #ffffff;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    }
+
+    /* 按钮和交互元素 */
+    button {
+        background-color: #5C6BC0;  /* 更深的蓝紫色 */
+    }
+    
+    button:hover {
+        background-color: #7986CB;  /* 稍浅的蓝紫色 */
+    }
+
+    /* 输入框焦点样式 */
+    input:focus, select:focus {
+        outline: none;
+        border-color: #7B8CDE;
+        box-shadow: 0 0 0 2px rgba(123, 140, 222, 0.2);
+    }
+}
+
+body[data-theme="light"] {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    color: #2c3e50;
+}
 
 @media (max-width: 600px) {
     .floating-buttons {

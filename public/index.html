@@ -20,6 +20,7 @@
                 <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
                 <button class="floating-button export-data" onclick="exportData()" data-tooltip="导出数据"></button>
                 <button class="floating-button import-data" onclick="document.getElementById('importFile').click()" data-tooltip="导入数据"></button>
+                <button class="floating-button theme-toggle" onclick="toggleThemeMenu()" data-tooltip="切换主题"></button>
                 <input type="file" id="importFile" style="display: none" accept=".json" onchange="importData(event)">
             </div>
         </div>
@@ -51,6 +52,23 @@
         <!-- 网站列表 -->
         <div class="sites-container" id="sitesList"></div>
     </div>
+
+    <!-- 主题切换菜单 -->
+    <div class="theme-menu" id="themeMenu">
+        <div class="theme-option" onclick="setTheme('light')">
+            <span class="theme-icon">☀</span>
+            <span>浅色模式</span>
+        </div>
+        <div class="theme-option" onclick="setTheme('dark')">
+            <span class="theme-icon">☾</span>
+            <span>深色模式</span>
+        </div>
+        <div class="theme-option" onclick="setTheme('system')">
+            <span class="theme-icon">⚙</span>
+            <span>跟随系统</span>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html> 

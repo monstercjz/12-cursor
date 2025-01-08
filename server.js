@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
+const version = require('./version.json');
 const app = express();
 
 // 启用CORS和JSON解析
@@ -37,6 +38,14 @@ app.use((err, req, res, next) => {
     res.status(500).json({
         error: '服务器内部错误',
         message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
+// 版本信息接口
+app.get('/api/version', (req, res) => {
+    res.json({
+        version: version.version,
+        lastUpdate: version.lastUpdate
     });
 });
 

@@ -312,6 +312,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadSites();
+
+    // 版本检查
+    async function checkVersion() {
+        try {
+            const response = await fetch('/api/version');
+            const data = await response.json();
+            console.log(`当前版本: ${data.version}`);
+            
+            // 检查本地存储的版本
+            const localVersion = localStorage.getItem('version');
+            if (localVersion !== data.version) {
+                console.log('检测到新版本，正在更新...');
+                localStorage.setItem('version', data.version);
+                // 可以在这里添加版本更新提示或其他操作
+            }
+        } catch (error) {
+            console.error('版本检查失败:', error);
+        }
+    }
+
+    checkVersion();
 });
 
 // 保存标题
@@ -884,4 +905,49 @@ function adjustPopupPosition(popup, clickX, clickY) {
     // 应用位置
     popup.style.left = `${left}px`;
     popup.style.top = `${top}px`;
-} 
+}
+
+// 主题切换相关函数
+function toggleThemeMenu() {
+    const themeMenu = document.getElementById('themeMenu');
+    themeMenu.classList.toggle('show');
+    event.stopPropagation();
+}
+
+function setTheme(theme) {
+    // 移除旧的主题类
+    document.body.classList.remove('theme-light', 'theme-dark');
+    
+    // 保存主题设置
+    localStorage.setItem('preferred-theme', theme);
+    
+    if (theme === 'system') {
+        // 移除强制主题
+        document.body.removeAttribute('data-theme');
+    } else {
+        // 设置新主题
+        document.body.setAttribute('data-theme', theme);
+        document.body.classList.add(`theme-${theme}`);
+    }
+    
+    // 关闭主题菜单
+    document.getElementById('themeMenu').classList.remove('show');
+}
+
+// 初始化主题
+function initTheme() {
+    const savedTheme = localStorage.getItem('preferred-theme') || 'system';
+    setTheme(savedTheme);
+}
+
+// 在页面加载时初始化主题
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    
+    // 点击其他地方关闭主题菜单
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.theme-menu') && !e.target.closest('.theme-toggle')) {
+            document.getElementById('themeMenu').classList.remove('show');
+        }
+    });
+}); 
