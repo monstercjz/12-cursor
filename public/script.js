@@ -7,27 +7,30 @@ async function loadSites() {
     try {
         const response = await fetch('http://localhost:3000/api/sites');
         const data = await response.json();
+        
+        // 1. 先显示数据，提升用户体验
         sites = data.sites || [];
         groups = data.groups || [];
         pageTitle = data.title || "我的网站导航";
         
-        // 检查是否需要清理
-        const needsCleanup = sites.some(site => 
+        updateGroupSelect();
+        displaySites();
+        document.getElementById('mainTitle').textContent = pageTitle;
+        
+        // 2. 后台检查数据有效性
+        const hasInvalidData = sites.some(site => 
             !Validator.siteName(site.name) || 
             !Validator.url(site.url)
         );
         
-        if (needsCleanup) {
-            // 延迟执行清理
+        // 3. 如果有无效数据，延迟清理
+        if (hasInvalidData) {
             setTimeout(() => {
-                cleanupSites();
-                displaySites(); // 重新显示清理后的数据
-            }, 1000); // 延迟1秒执行
+                if (cleanupSites()) {
+                    displaySites(); // 只在实际清理后更新显示
+                }
+            }, 2000); // 延迟2秒执行清理
         }
-        
-        updateGroupSelect();
-        displaySites();
-        document.getElementById('mainTitle').textContent = pageTitle;
     } catch (error) {
         handleError(error, '加载数据');
     }
@@ -1209,25 +1212,46 @@ function showToast(message, type = 'info') {
 
 // 数据清理和去重
 function cleanupSites() {
+    // 1. 先进行数据修复
+    sites = sites.map(site => {
+        // 修复URL格式
+        if (site.url && !site.url.startsWith('http')) {
+            site.url = 'https://' + site.url;
+        }
+        return site;
+    });
+
+    // 2. 再进行数据验证和去重
     const seen = new Set();
     const validSites = sites.filter(site => {
-        // 验证名称和URL
+        // 基本验证
+        if (!site.name || !site.url) return false;
+        
+        // 格式验证
         if (!Validator.siteName(site.name) || !Validator.url(site.url)) {
+            console.log(`清理无效数据: ${site.name} - ${site.url}`);
             return false;
         }
         
-        // 去重检查
+        // 去重检查（只对相同分组的相同URL去重）
         const key = `${site.url}-${site.groupIndex}`;
-        if (seen.has(key)) return false;
+        if (seen.has(key)) {
+            console.log(`清理重复数据: ${site.name} - ${site.url}`);
+            return false;
+        }
         seen.add(key);
         return true;
     });
-    
+
+    // 3. 如果有变化，保存并提示
     if (validSites.length !== sites.length) {
+        const removedCount = sites.length - validSites.length;
         sites = validSites;
         saveSites();
-        showToast(`已清理 ${sites.length - validSites.length} 个无效或重复的网站`, 'info');
+        showToast(`已清理 ${removedCount} 个无效或重复的网站`, 'info');
+        return true; // 返回是否进行了清理
     }
+    return false;
 }
 
 // 统一的错误处理
@@ -1253,4 +1277,42 @@ function validateSiteInput(name, url, description) {
         url: url.trim(),
         description: description.trim()
     };
-} 
+}
+
+// 添加自动备份功能
+function autoBackup() {
+    const backup = {
+        timestamp: new Date().toISOString(),
+        data: {
+            sites,
+            groups,
+            title: pageTitle
+        }
+    };
+    
+    try {
+        const backups = JSON.parse(localStorage.getItem('site_backups') || '[]');
+        backups.push(backup);
+        
+        // 只保留最近5个备份
+        while (backups.length > 5) {
+            backups.shift();
+        }
+        
+        localStorage.setItem('site_backups', JSON.stringify(backups));
+        console.log('自动备份完成:', backup.timestamp);
+    } catch (error) {
+        console.error('自动备份失败:', error);
+    }
+}
+
+// 在关键操作后触发备份
+['addSite', 'deleteSite', 'cleanupSites', 'addGroup', 'importData']
+.forEach(funcName => {
+    const originalFunc = window[funcName];
+    window[funcName] = async function(...args) {
+        const result = await originalFunc.apply(this, args);
+        autoBackup();
+        return result;
+    };
+}); 

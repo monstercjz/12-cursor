@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
 const version = require('./version.json');
 const app = express();
@@ -10,6 +11,57 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const DATA_FILE = 'sites.json';
+
+// 创建备份目录
+const BACKUP_DIR = path.join(__dirname, 'backups');
+if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR);
+}
+
+// 自动备份函数
+function createBackup() {
+    const date = new Date().toISOString().split('T')[0];
+    const time = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+    const backupFile = path.join(BACKUP_DIR, `backup_${date}_${time}.json`);
+    
+    try {
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        fs.writeFileSync(backupFile, data);
+        console.log(`备份已创建: ${backupFile}`);
+        
+        // 清理7天前的备份
+        cleanupOldBackups();
+    } catch (error) {
+        console.error('备份创建失败:', error);
+    }
+}
+
+// 手动执行清理函数
+function cleanupOldBackups() {
+    const files = fs.readdirSync(BACKUP_DIR)
+        .filter(file => file.endsWith('.json')); // 只处理json文件
+    
+    // 按修改时间排序，新的在前
+    const sortedFiles = files
+        .map(file => {
+            const filePath = path.join(BACKUP_DIR, file);
+            const stats = fs.statSync(filePath);
+            return {
+                name: file,
+                path: filePath,
+                mtime: stats.mtime
+            };
+        })
+        .sort((a, b) => b.mtime - a.mtime);
+    
+    // 保留最新的5个备份，删除其他的
+    if (sortedFiles.length > 5) {
+        sortedFiles.slice(5).forEach(file => {
+            fs.unlinkSync(file.path);
+            console.log(`已删除旧备份: ${file.name}`);
+        });
+    }
+}
 
 // 确保数据文件存在
 if (!fs.existsSync(DATA_FILE)) {
@@ -76,9 +128,52 @@ function handleError(error, res, message = '操作失败') {
 app.post('/api/sites', validateData, (req, res) => {
     try {
         fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
+        // 创建备份
+        createBackup();
         res.json({ success: true });
     } catch (error) {
         handleError(error, res, '保存失败');
+    }
+});
+
+// 获取备份列表
+app.get('/api/backups', (req, res) => {
+    try {
+        const files = fs.readdirSync(BACKUP_DIR)
+            .filter(file => file.endsWith('.json'))
+            .map(file => {
+                const stats = fs.statSync(path.join(BACKUP_DIR, file));
+                return {
+                    name: file,
+                    date: stats.mtime
+                };
+            })
+            .sort((a, b) => b.date - a.date);
+        
+        res.json(files);
+    } catch (error) {
+        handleError(error, res, '获取备份列表失败');
+    }
+});
+
+// 恢复指定备份
+app.post('/api/backups/restore/:file', (req, res) => {
+    try {
+        const backupFile = path.join(BACKUP_DIR, req.params.file);
+        if (!fs.existsSync(backupFile)) {
+            throw new Error('备份文件不存在');
+        }
+        
+        // 先备份当前数据
+        createBackup();
+        
+        // 恢复备份数据
+        const backupData = fs.readFileSync(backupFile, 'utf8');
+        fs.writeFileSync(DATA_FILE, backupData);
+        
+        res.json({ success: true });
+    } catch (error) {
+        handleError(error, res, '恢复备份失败');
     }
 });
 
@@ -124,4 +219,6 @@ app.get('/api/version', (req, res) => {
 
 app.listen(3000, () => {
     console.log('服务器运行在 http://localhost:3000');
+    // 立即执行一次清理
+    cleanupOldBackups();
 }); 
