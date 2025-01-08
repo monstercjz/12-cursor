@@ -194,7 +194,9 @@ button:hover {
     user-select: none;
 }
 
-.title-edit-form {
+.title-edit-form,
+.site-edit-form,
+.group-edit-form {
     position: fixed;
     background: white;
     padding: 15px;
@@ -203,6 +205,10 @@ button:hover {
     border: 1px solid #eee;
     z-index: 1000;
     display: none;
+    transition: all 0.2s ease;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
 }
 
 .title-edit-form input {
@@ -213,18 +219,6 @@ button:hover {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
-}
-
-.site-edit-form {
-    position: fixed;
-    background: white;
-    padding: 15px;
-    border-radius: 6px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
-    border: 1px solid #eee;
-    z-index: 1000;
-    display: none;
-    min-width: 300px;
 }
 
 .site-edit-form input,
@@ -271,18 +265,6 @@ button:hover {
 
 .site-edit-form > *:not(:last-child) {
     margin-bottom: 12px;
-}
-
-.group-edit-form {
-    position: fixed;
-    background: white;
-    padding: 15px;
-    border-radius: 6px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
-    border: 1px solid #eee;
-    z-index: 1000;
-    display: none;
-    min-width: 300px;
 }
 
 .group-edit-form input {
@@ -451,6 +433,18 @@ button:hover {
     font-weight: bold;
 }
 
+.floating-button.export-data::after {
+    content: "↑";
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.floating-button.import-data::after {
+    content: "↓";
+    font-size: 20px;
+    font-weight: bold;
+}
+
 .floating-button.menu-toggle::after {
     content: "≡";
     font-size: 24px;
@@ -530,4 +524,14 @@ button:hover {
     width: 100%;
     text-decoration: none;
     color: inherit;
+} 
+
+@media (prefers-color-scheme: dark) {
+    .title-edit-form,
+    .site-edit-form,
+    .group-edit-form {
+        background: #2d2d2d;
+        border-color: #3d3d3d;
+        color: #fff;
+    }
 } 

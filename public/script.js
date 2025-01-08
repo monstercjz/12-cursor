@@ -10,6 +10,10 @@ async function loadSites() {
         sites = data.sites || [];
         groups = data.groups || [];
         pageTitle = data.title || "我的网站导航";
+        
+        // 添加数据迁移
+        migrateVisitData();
+        
         updateGroupSelect();
         displaySites();
         document.getElementById('mainTitle').textContent = pageTitle;
@@ -199,6 +203,22 @@ function createSiteElement(site) {
         </a>
         <button class="delete-btn" onclick="deleteSite(${sites.indexOf(site)})">删除</button>
     `;
+    
+    const siteLink = siteElement.querySelector('.site-link');
+    siteLink.addEventListener('click', (e) => {
+        const siteIndex = parseInt(e.currentTarget.dataset.siteIndex);
+        trackSiteVisit(siteIndex);
+    });
+    
+    // 显示访问统计信息
+    if (site.stats && site.stats.visitCount > 0) {
+        const lastVisit = new Date(site.stats.lastVisit);
+        siteElement.querySelector('.tooltip-content').insertAdjacentHTML('beforeend', `
+            <div><strong>访问:</strong> ${site.stats.visitCount}次</div>
+            <div><strong>最近:</strong> ${lastVisit.toLocaleDateString()}</div>
+        `);
+    }
+    
     return siteElement;
 }
 
@@ -248,10 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('titleInput');
         input.value = pageTitle;
         
-        // 设置表单位置
         form.style.display = 'block';
-        form.style.left = e.pageX + 'px';
-        form.style.top = e.pageY + 'px';
+        adjustPopupPosition(form, e.pageX, e.pageY);
     });
 
     // 点击其他地方关闭表单
@@ -335,8 +353,7 @@ function showSiteEditForm(x, y, siteIndex) {
     `;
     
     form.style.display = 'block';
-    form.style.left = x + 'px';
-    form.style.top = y + 'px';
+    adjustPopupPosition(form, x, y);
 }
 
 function hideSiteEditForm() {
@@ -460,8 +477,7 @@ function showGroupEditForm(x, y, groupIndex) {
     deleteOptions.style.display = 'none';
     
     form.style.display = 'block';
-    form.style.left = x + 'px';
-    form.style.top = y + 'px';
+    adjustPopupPosition(form, x, y);
 }
 
 // 隐藏组编辑表单
@@ -613,13 +629,21 @@ function addSearchBar() {
 
 // 添加导入导出功能
 function exportData() {
-    const data = JSON.stringify({sites, groups, pageTitle});
-    const blob = new Blob([data], {type: 'application/json'});
+    const data = {
+        sites,
+        groups,
+        pageTitle,
+        version: '1.0',
+        exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'navigation_backup.json';
+    a.download = `navigation_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
+    URL.revokeObjectURL(url);
 }
 
 // 添加本地缓存
@@ -713,4 +737,151 @@ document.addEventListener('click', (e) => {
         menuButtons.classList.remove('show');
         menuToggle.classList.remove('active');
     }
-}); 
+});
+
+// 导入数据功能
+async function importData(event) {
+    try {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        if (!data.sites || !Array.isArray(data.sites)) {
+            throw new Error('无效的数据格式');
+        }
+        
+        sites = data.sites;
+        groups = data.groups || ['默认分组'];
+        pageTitle = data.pageTitle || '我的网站导航';
+        
+        await saveSites();
+        displaySites();
+        document.getElementById('mainTitle').textContent = pageTitle;
+        
+        alert('数据导入成功！');
+    } catch (error) {
+        alert('导入失败：' + error.message);
+    } finally {
+        event.target.value = ''; // 清空文件选择
+    }
+}
+
+// 修改快捷键监听
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + / 显示快捷键帮助
+    if (e.key === '/' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        showShortcutsHelp();
+    }
+    
+    // Alt + S 聚焦搜索框
+    if (e.key === 's' && e.altKey) {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+    }
+    
+    // Alt + N 添加新网站
+    if (e.key === 'n' && e.altKey) {
+        e.preventDefault();
+        toggleAddForm();
+    }
+    
+    // Alt + G 添加新分组
+    if (e.key === 'g' && e.altKey) {
+        e.preventDefault();
+        showAddGroupForm();
+    }
+    
+    // Esc 关闭所有弹出层
+    if (e.key === 'Escape') {
+        hideAddForm();
+        hideAddGroupForm();
+        hideSiteEditForm();
+        hideEditForm();
+    }
+});
+
+// 更新快捷键帮助显示
+function showShortcutsHelp() {
+    const helpHTML = `
+        <div class="shortcuts-help">
+            <h3>键盘快捷键</h3>
+            <ul>
+                <li><kbd>Ctrl/⌘</kbd> + <kbd>/</kbd> 显示此帮助</li>
+                <li><kbd>Alt</kbd> + <kbd>S</kbd> 搜索</li>
+                <li><kbd>Alt</kbd> + <kbd>N</kbd> 添加网站</li>
+                <li><kbd>Alt</kbd> + <kbd>G</kbd> 添加分组</li>
+                <li><kbd>Esc</kbd> 关闭弹出层</li>
+            </ul>
+            <button onclick="this.parentElement.remove()">关闭</button>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', helpHTML);
+}
+
+// 修改访问统计功能
+function trackSiteVisit(siteIndex) {
+    const site = sites[siteIndex];
+    // 只记录访问次数和最后访问时间
+    if (!site.stats) {
+        site.stats = {
+            visitCount: 0,
+            lastVisit: null
+        };
+    }
+    
+    site.stats.visitCount++;
+    site.stats.lastVisit = new Date().toISOString();
+    
+    saveSites();
+}
+
+// 数据迁移函数
+function migrateVisitData() {
+    sites.forEach(site => {
+        if (site.visits && Array.isArray(site.visits)) {
+            site.stats = {
+                visitCount: site.visits.length,
+                lastVisit: site.visits[site.visits.length - 1]
+            };
+            delete site.visits; // 删除旧的访问记录
+        }
+    });
+    saveSites();
+}
+
+// 添加一个通用的弹窗位置调整函数
+function adjustPopupPosition(popup, clickX, clickY) {
+    // 获取视窗大小
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // 获取弹窗大小
+    const popupRect = popup.getBoundingClientRect();
+    const popupWidth = popupRect.width;
+    const popupHeight = popupRect.height;
+    
+    // 计算理想位置
+    let left = clickX;
+    let top = clickY;
+    
+    // 检查右边界
+    if (left + popupWidth > viewportWidth - 10) {
+        left = viewportWidth - popupWidth - 10;
+    }
+    
+    // 检查下边界
+    if (top + popupHeight > viewportHeight - 10) {
+        top = viewportHeight - popupHeight - 10;
+    }
+    
+    // 确保不超出左上边界
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+    
+    // 应用位置
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+} 

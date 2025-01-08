@@ -18,6 +18,9 @@
             <div class="menu-buttons">
                 <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>
                 <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
+                <button class="floating-button export-data" onclick="exportData()" data-tooltip="导出数据"></button>
+                <button class="floating-button import-data" onclick="document.getElementById('importFile').click()" data-tooltip="导入数据"></button>
+                <input type="file" id="importFile" style="display: none" accept=".json" onchange="importData(event)">
             </div>
         </div>
 
