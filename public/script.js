@@ -209,11 +209,12 @@ async function addSite(siteData) {
         const siteData = formatSiteInput(name, url, description);
         
         const icon = await getFavicon(siteData.url);
+        const iconUrl = icon || '/icons/default-icon.png';
         
         sites.push({
             ...siteData,
             groupIndex,
-            icon,
+            icon: iconUrl,
             stats: {
                 visitCount: 0,
                 lastVisit: null
@@ -327,7 +328,8 @@ function createSiteElement(site) {
     
     siteElement.innerHTML = `
         <a href="${site.url}" target="_blank" class="site-link" data-site-index="${sites.indexOf(site)}">
-            ${site.icon ? `<img src="${site.icon}" class="site-icon" alt="${site.name}">` : ''}
+            ${site.icon ? `<img src="${site.icon}" class="site-icon" alt="${site.name}">` : 
+            `<img src="/icons/default-icon.png" class="site-icon" alt="${site.name}">`}
             ${site.name}
             <div class="tooltip">
                 <div class="tooltip-content">
