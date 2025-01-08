@@ -56,15 +56,16 @@ button:hover {
     border-radius: 8px;
     padding: 12px 15px;
     margin: 8px;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid rgba(0,0,0,0.05);
     text-align: center;
-    display: block;
+    display: flex;
+    align-items: center;
 }
 
 .site-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     background: linear-gradient(to right, #ffffff, #f8f9fa);
 }
 
@@ -143,11 +144,12 @@ button:hover {
 }
 
 .site-link {
-    color: #2c3e50;
-    font-weight: 500;
-    text-decoration: none;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
+    text-decoration: none;
+    color: inherit;
 }
 
 .site-link:hover {
@@ -340,8 +342,8 @@ button:hover {
 
 .sites-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 25px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
     padding: 20px;
 }
 
@@ -430,4 +432,79 @@ button:hover {
     content: "G+";
     font-size: 20px;
     font-weight: bold;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .site-item {
+        background: #2d2d2d;
+        border: 1px solid #3d3d3d;
+    }
+} 
+
+@media (max-width: 600px) {
+    .floating-buttons {
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .site-item {
+        margin: 5px;
+    }
+} 
+
+.search-container {
+    margin: 20px auto;
+    max-width: 600px;
+    padding: 0 20px;
+}
+
+.search-container input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.search-container input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.site-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.site-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+
+.site-name {
+    flex: 1;
+}
+
+.site-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+}
+
+.site-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-decoration: none;
+    color: inherit;
 } 

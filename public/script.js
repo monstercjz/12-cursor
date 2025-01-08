@@ -184,9 +184,10 @@ function displaySites() {
 
 // 创建网站元素的辅助函数
 function createSiteElement(site) {
-        const siteElement = document.createElement('div');
-        siteElement.className = 'site-item';
-        siteElement.innerHTML = `
+    const siteElement = document.createElement('div');
+    siteElement.className = 'site-item';
+    
+    siteElement.innerHTML = `
         <a href="${site.url}" target="_blank" class="site-link" data-site-index="${sites.indexOf(site)}">
             ${site.name}
             <div class="tooltip">
@@ -283,6 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSiteEditForm();
         }
     });
+
+    // 添加搜索功能
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterSites(e.target.value.toLowerCase());
+        });
+    }
 
     loadSites();
 });
@@ -585,4 +594,105 @@ async function handleDrop(e) {
     
     await saveSites();
     displaySites();
+}
+
+// 添加搜索功能
+function addSearchBar() {
+    const searchHTML = `
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="搜索网站...">
+        </div>
+    `;
+    document.querySelector('.title-container').insertAdjacentHTML('afterend', searchHTML);
+    
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filterSites(searchTerm);
+    });
+}
+
+// 添加导入导出功能
+function exportData() {
+    const data = JSON.stringify({sites, groups, pageTitle});
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'navigation_backup.json';
+    a.click();
+}
+
+// 添加本地缓存
+function cacheData() {
+    localStorage.setItem('navigationData', JSON.stringify({
+        sites,
+        groups,
+        pageTitle,
+        timestamp: Date.now()
+    }));
+}
+
+// 从缓存加载
+async function loadFromCache() {
+    const cached = localStorage.getItem('navigationData');
+    if (cached) {
+        const data = JSON.parse(cached);
+        if (Date.now() - data.timestamp < 300000) { // 5分钟缓存
+            return data;
+        }
+    }
+    return null;
+}
+
+// 添加延迟加载功能
+function lazyLoadImages() {
+    const images = document.querySelectorAll('img[data-src]');
+    const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                imageObserver.unobserve(img);
+            }
+        });
+    });
+    
+    images.forEach(img => imageObserver.observe(img));
+}
+
+// 添加URL验证
+function validateUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// 添加XSS防护
+function sanitizeInput(input) {
+    return input.replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+// 在现有代码的适当位置添加搜索功能
+function filterSites(searchTerm) {
+    const siteElements = document.querySelectorAll('.site-item');
+    siteElements.forEach(element => {
+        const siteLink = element.querySelector('.site-link');
+        const siteName = siteLink.textContent.toLowerCase();
+        const siteUrl = siteLink.href.toLowerCase();
+        
+        if (siteName.includes(searchTerm) || siteUrl.includes(searchTerm)) {
+            element.style.display = '';
+        } else {
+            element.style.display = 'none';
+        }
+    });
 } 

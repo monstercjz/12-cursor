@@ -31,6 +31,15 @@ app.post('/api/sites', (req, res) => {
     res.json({ success: true });
 });
 
+// 添加错误处理中间件
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        error: '服务器内部错误',
+        message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 app.listen(3000, () => {
     console.log('服务器运行在 http://localhost:3000');
 }); 
