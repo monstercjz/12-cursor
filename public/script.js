@@ -11,8 +11,19 @@ async function loadSites() {
         groups = data.groups || [];
         pageTitle = data.title || "我的网站导航";
         
-        // 清理重复数据
-        cleanupSites();
+        // 检查是否需要清理
+        const needsCleanup = sites.some(site => 
+            !Validator.siteName(site.name) || 
+            !Validator.url(site.url)
+        );
+        
+        if (needsCleanup) {
+            // 延迟执行清理
+            setTimeout(() => {
+                cleanupSites();
+                displaySites(); // 重新显示清理后的数据
+            }, 1000); // 延迟1秒执行
+        }
         
         updateGroupSelect();
         displaySites();
@@ -85,21 +96,78 @@ function updateGroupSelect() {
     `;
 }
 
-// 添加网站
+// 添加验证模块
+const Validator = {
+    url(url) {
+        if (!url) return false;
+        // 不允许单个数字或字符作为URL
+        if (/^\d+$/.test(url)) return false;
+        
+        try {
+            new URL(url.startsWith('http') ? url : 'https://' + url);
+            return true;
+        } catch {
+            return false;
+        }
+    },
+    
+    siteName(name) {
+        const trimmed = name.trim();
+        // 名称至少2个字符，不能只是数字
+        return trimmed.length >= 2 && !/^\d+$/.test(trimmed);
+    },
+    
+    groupName(name) {
+        return name && name.trim().length > 0;
+    }
+};
+
+// 统一的用户提示
+function handleUserInput(message, type = 'error') {
+    showToast(message, type);
+}
+
+/**
+ * 验证并格式化网站输入
+ * @param {string} name - 网站名称
+ * @param {string} url - 网站地址
+ * @param {string} description - 网站描述
+ * @returns {Object} 格式化后的网站数据
+ */
+function formatSiteInput(name, url, description) {
+    if (!Validator.siteName(name)) {
+        throw new Error('网站名称不能为空');
+    }
+    
+    if (!Validator.url(url)) {
+        throw new Error('请输入有效的网址');
+    }
+    
+    // 确保URL包含协议
+    const formattedUrl = url.startsWith('http') ? url : 'https://' + url;
+    
+    return {
+        name: name.trim(),
+        url: formattedUrl,
+        description: description.trim()
+    };
+}
+
+// 修改添加网站函数
 async function addSite() {
     try {
         const name = document.getElementById('siteName').value;
-        let url = document.getElementById('siteUrl').value;
+        const url = document.getElementById('siteUrl').value;
         const description = document.getElementById('siteDesc').value;
         const groupSelect = document.getElementById('groupSelect');
         const groupIndex = groupSelect.value ? parseInt(groupSelect.value) : undefined;
         
-        const validated = validateSiteInput(name, url, description);
+        const siteData = formatSiteInput(name, url, description);
         
-        const icon = await getFavicon(validated.url);
+        const icon = await getFavicon(siteData.url);
         
         sites.push({
-            ...validated,
+            ...siteData,
             groupIndex,
             icon,
             stats: {
@@ -107,6 +175,9 @@ async function addSite() {
                 lastVisit: null
             }
         });
+        
+        // 清理并去重
+        cleanupSites();
         
         await saveSites();
         displaySites();
@@ -861,6 +932,9 @@ async function importData(event) {
         groups = data.groups || [];
         pageTitle = data.title || "我的网站导航";
         
+        // 清理导入的数据
+        cleanupSites();
+        
         await saveSites();
         displaySites();
         document.getElementById('mainTitle').textContent = pageTitle;
@@ -1124,54 +1198,6 @@ function getTagColor(tag) {
     return tagColors[tag] || '#757575';
 }
 
-// 添加标签相关函数
-function addTag(siteIndex, tag) {
-    const site = sites[siteIndex];
-    if (!site.tags) {
-        site.tags = [];
-    }
-    if (!site.tags.includes(tag)) {
-        site.tags.push(tag);
-        saveSites();
-        displaySites();
-    }
-}
-
-function removeTag(siteIndex, tag) {
-    const site = sites[siteIndex];
-    if (site.tags) {
-        site.tags = site.tags.filter(t => t !== tag);
-        saveSites();
-        displaySites();
-    }
-}
-
-function renderTags(site) {
-    if (!site.tags || site.tags.length === 0) return '';
-    
-    return `
-        <div class="site-tags">
-            ${site.tags.map(tag => `
-                <span class="tag" style="background-color: ${getTagColor(tag)}">
-                    ${tag}
-                    <span class="tag-remove" onclick="removeTag(${sites.indexOf(site)}, '${tag}')">×</span>
-                </span>
-            `).join('')}
-        </div>
-    `;
-}
-
-function getTagColor(tag) {
-    const tagColors = {
-        '开发': '#4CAF50',
-        '工具': '#2196F3',
-        '文档': '#FF9800',
-        '娱乐': '#9C27B0',
-        '学习': '#E91E63'
-    };
-    return tagColors[tag] || '#757575';
-}
-
 // 添加提示组件
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -1184,17 +1210,23 @@ function showToast(message, type = 'info') {
 // 数据清理和去重
 function cleanupSites() {
     const seen = new Set();
-    const uniqueSites = sites.filter(site => {
+    const validSites = sites.filter(site => {
+        // 验证名称和URL
+        if (!Validator.siteName(site.name) || !Validator.url(site.url)) {
+            return false;
+        }
+        
+        // 去重检查
         const key = `${site.url}-${site.groupIndex}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
     });
     
-    if (uniqueSites.length !== sites.length) {
-        sites = uniqueSites;
+    if (validSites.length !== sites.length) {
+        sites = validSites;
         saveSites();
-        showToast('已清理重复网站', 'info');
+        showToast(`已清理 ${sites.length - validSites.length} 个无效或重复的网站`, 'info');
     }
 }
 

@@ -1,13 +1,14 @@
 {
   "name": "navigation-site",
-  "version": "1.2.0",
+  "version": "1.5.0",
   "description": "个人网站导航工具",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "version": "node scripts/version.js",
-    "backup": "node scripts/backup.js"
+    "backup": "node scripts/backup.js",
+    "validate": "node scripts/validate.js"
   },
   "keywords": [],
   "author": "",
@@ -18,5 +19,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

@@ -29,10 +29,47 @@ app.get('/api/sites', (req, res) => {
 // 数据验证中间件
 function validateData(req, res, next) {
     const data = req.body;
-    if (!data || !Array.isArray(data.sites)) {
-        return res.status(400).json({ error: '无效的数据格式' });
+    try {
+        // 基本格式验证
+        if (!data || !Array.isArray(data.sites)) {
+            throw new Error('无效的数据格式');
+        }
+        
+        // 验证每个网站的数据
+        data.sites.forEach(site => {
+            if (!site.name || site.name.trim().length < 2 || /^\d+$/.test(site.name)) {
+                throw new Error('网站名称至少需要2个字符，且不能只是数字');
+            }
+            
+            if (!site.url || /^\d+$/.test(site.url)) {
+                throw new Error('无效的网站地址');
+            }
+            
+            try {
+                new URL(site.url.startsWith('http') ? site.url : 'https://' + site.url);
+            } catch {
+                throw new Error('网站地址格式不正确');
+            }
+        });
+        
+        next();
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
     }
-    next();
+}
+
+/**
+ * 统一的错误响应处理
+ * @param {Error} error - 错误对象
+ * @param {Response} res - Express响应对象
+ * @param {string} message - 错误消息
+ */
+function handleError(error, res, message = '操作失败') {
+    console.error(error);
+    res.status(500).json({
+        error: message,
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
 }
 
 // 保存网站数据
@@ -41,10 +78,7 @@ app.post('/api/sites', validateData, (req, res) => {
         fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ 
-            error: '保存失败',
-            message: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
+        handleError(error, res, '保存失败');
     }
 });
 
@@ -67,7 +101,7 @@ app.post('/api/sites/:id/visit', async (req, res) => {
         fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: '统计更新失败' });
+        handleError(error, res, '统计更新失败');
     }
 });
 
