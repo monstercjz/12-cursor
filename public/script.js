@@ -695,4 +695,22 @@ function filterSites(searchTerm) {
             element.style.display = 'none';
         }
     });
-} 
+}
+
+// 添加菜单切换功能
+function toggleMenu() {
+    const menuButtons = document.querySelector('.menu-buttons');
+    const menuToggle = document.querySelector('.menu-toggle');
+    menuButtons.classList.toggle('show');
+    menuToggle.classList.toggle('active');
+}
+
+// 点击其他地方关闭菜单
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.floating-buttons')) {
+        const menuButtons = document.querySelector('.menu-buttons');
+        const menuToggle = document.querySelector('.menu-toggle');
+        menuButtons.classList.remove('show');
+        menuToggle.classList.remove('active');
+    }
+}); 

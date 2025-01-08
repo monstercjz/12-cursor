@@ -381,6 +381,23 @@ button:hover {
     z-index: 100;
 }
 
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+}
+
+.menu-buttons.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .floating-button {
     width: 50px;
     height: 50px;
@@ -431,6 +448,12 @@ button:hover {
 .floating-button.add-group::after {
     content: "G+";
     font-size: 20px;
+    font-weight: bold;
+}
+
+.floating-button.menu-toggle::after {
+    content: "≡";
+    font-size: 24px;
     font-weight: bold;
 }
 

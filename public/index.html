@@ -14,8 +14,11 @@
         
         <!-- 添加新的浮动按钮 -->
         <div class="floating-buttons">
-            <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>
-            <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
+            <button class="floating-button menu-toggle" onclick="toggleMenu()" data-tooltip="菜单"></button>
+            <div class="menu-buttons">
+                <button class="floating-button add-site" onclick="toggleAddForm()" data-tooltip="添加网站"></button>
+                <button class="floating-button add-group" onclick="showAddGroupForm()" data-tooltip="添加分组"></button>
+            </div>
         </div>
 
         <!-- 添加网站表单 -->
