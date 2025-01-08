@@ -32,6 +32,29 @@ app.post('/api/sites', (req, res) => {
     res.json({ success: true });
 });
 
+// 添加访问统计API
+app.post('/api/sites/:id/visit', async (req, res) => {
+    try {
+        const data = JSON.parse(fs.readFileSync(DATA_FILE));
+        const site = data.sites[req.params.id];
+        
+        if (!site.stats) {
+            site.stats = {
+                visitCount: 0,
+                lastVisit: null
+            };
+        }
+        
+        site.stats.visitCount++;
+        site.stats.lastVisit = new Date().toISOString();
+        
+        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: '统计更新失败' });
+    }
+});
+
 // 添加错误处理中间件
 app.use((err, req, res, next) => {
     console.error(err.stack);

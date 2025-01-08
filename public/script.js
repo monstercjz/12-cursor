@@ -88,14 +88,10 @@ function updateGroupSelect() {
 
 // 添加网站
 async function addSite() {
-    const nameInput = document.getElementById('siteName');
-    const urlInput = document.getElementById('siteUrl');
-    const descInput = document.getElementById('siteDesc');
+    const name = document.getElementById('siteName').value.trim();
+    let url = document.getElementById('siteUrl').value.trim();
+    const description = document.getElementById('siteDesc').value.trim();
     const groupSelect = document.getElementById('groupSelect');
-    
-    const name = nameInput.value.trim();
-    let url = urlInput.value.trim();
-    const description = descInput.value.trim();
     const groupIndex = groupSelect.value ? parseInt(groupSelect.value) : undefined;
     
     if (!name || !url) {
@@ -107,20 +103,30 @@ async function addSite() {
         url = 'https://' + url;
     }
     
-    sites.push({ 
-        name, 
-        url, 
-        description, 
-        groupIndex 
+    // 获取网站图标
+    const icon = await getFavicon(url);
+    
+    sites.push({
+        name,
+        url,
+        description,
+        groupIndex,
+        icon,
+        stats: {
+            visitCount: 0,
+            lastVisit: null
+        }
     });
     
     await saveSites();
-    
-    nameInput.value = '';
-    urlInput.value = '';
-    descInput.value = '';
-    toggleAddForm();
     displaySites();
+    toggleAddForm();
+    
+    // 清空表单
+    document.getElementById('siteName').value = '';
+    document.getElementById('siteUrl').value = '';
+    document.getElementById('siteDesc').value = '';
+    groupSelect.value = '';
 }
 
 // 删除网站
@@ -193,6 +199,7 @@ function createSiteElement(site) {
     
     siteElement.innerHTML = `
         <a href="${site.url}" target="_blank" class="site-link" data-site-index="${sites.indexOf(site)}">
+            ${site.icon ? `<img src="${site.icon}" class="site-icon" alt="${site.name}">` : ''}
             ${site.name}
             <div class="tooltip">
                 <div class="tooltip-content">
@@ -649,22 +656,91 @@ function addSearchBar() {
 }
 
 // 添加导入导出功能
-function exportData() {
+async function exportData(format = 'json') {
     const data = {
         sites,
         groups,
         pageTitle,
-        version: '1.0',
         exportDate: new Date().toISOString()
     };
     
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    let exportContent;
+    let mimeType;
+    let fileExt;
+    
+    switch (format) {
+        case 'csv':
+            exportContent = sitesToCSV(data.sites);
+            mimeType = 'text/csv';
+            fileExt = 'csv';
+            break;
+        case 'markdown':
+            exportContent = sitesToMarkdown(data);
+            mimeType = 'text/markdown';
+            fileExt = 'md';
+            break;
+        default:
+            exportContent = JSON.stringify(data, null, 2);
+            mimeType = 'application/json';
+            fileExt = 'json';
+    }
+    
+    const blob = new Blob([exportContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `navigation_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `navigation_backup_${new Date().toISOString().split('T')[0]}.${fileExt}`;
     a.click();
     URL.revokeObjectURL(url);
+}
+
+function sitesToCSV(sites) {
+    const headers = ['名称', '地址', '描述', '分组', '标签', '访问次数'];
+    const rows = sites.map(site => [
+        site.name,
+        site.url,
+        site.description || '',
+        groups[site.groupIndex] || '未分组',
+        (site.tags || []).join(';'),
+        site.stats?.visitCount || 0
+    ]);
+    
+    return [headers, ...rows]
+        .map(row => row.map(cell => `"${cell}"`).join(','))
+        .join('\n');
+}
+
+function sitesToMarkdown(data) {
+    let md = `# ${data.pageTitle}\n\n`;
+    
+    // 按分组整理网站
+    const groupedSites = {};
+    data.sites.forEach(site => {
+        const groupName = site.groupIndex !== undefined ? 
+            data.groups[site.groupIndex] : '未分组';
+        if (!groupedSites[groupName]) {
+            groupedSites[groupName] = [];
+        }
+        groupedSites[groupName].push(site);
+    });
+    
+    // 生成Markdown内容
+    Object.entries(groupedSites).forEach(([groupName, sites]) => {
+        md += `## ${groupName}\n\n`;
+        sites.forEach(site => {
+            md += `- [${site.name}](${site.url})`;
+            if (site.description) {
+                md += ` - ${site.description}`;
+            }
+            if (site.tags && site.tags.length > 0) {
+                md += ` [${site.tags.join(', ')}]`;
+            }
+            md += '\n';
+        });
+        md += '\n';
+    });
+    
+    return md;
 }
 
 // 添加本地缓存
@@ -950,4 +1026,116 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('themeMenu').classList.remove('show');
         }
     });
-}); 
+});
+
+/**
+ * 自动获取网站favicon
+ * @param {string} url - 网站地址
+ * @returns {string} 图标URL
+ */
+async function getFavicon(url) {
+    try {
+        const domain = new URL(url).hostname;
+        // 尝试获取Google Favicon服务
+        return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    } catch (error) {
+        console.error('获取favicon失败:', error);
+        return '/default-icon.png';  // 默认图标
+    }
+}
+
+// 添加标签相关函数
+function addTag(siteIndex, tag) {
+    const site = sites[siteIndex];
+    if (!site.tags) {
+        site.tags = [];
+    }
+    if (!site.tags.includes(tag)) {
+        site.tags.push(tag);
+        saveSites();
+        displaySites();
+    }
+}
+
+function removeTag(siteIndex, tag) {
+    const site = sites[siteIndex];
+    if (site.tags) {
+        site.tags = site.tags.filter(t => t !== tag);
+        saveSites();
+        displaySites();
+    }
+}
+
+function renderTags(site) {
+    if (!site.tags || site.tags.length === 0) return '';
+    
+    return `
+        <div class="site-tags">
+            ${site.tags.map(tag => `
+                <span class="tag" style="background-color: ${getTagColor(tag)}">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag(${sites.indexOf(site)}, '${tag}')">×</span>
+                </span>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getTagColor(tag) {
+    const tagColors = {
+        '开发': '#4CAF50',
+        '工具': '#2196F3',
+        '文档': '#FF9800',
+        '娱乐': '#9C27B0',
+        '学习': '#E91E63'
+    };
+    return tagColors[tag] || '#757575';
+}
+
+// 添加标签相关函数
+function addTag(siteIndex, tag) {
+    const site = sites[siteIndex];
+    if (!site.tags) {
+        site.tags = [];
+    }
+    if (!site.tags.includes(tag)) {
+        site.tags.push(tag);
+        saveSites();
+        displaySites();
+    }
+}
+
+function removeTag(siteIndex, tag) {
+    const site = sites[siteIndex];
+    if (site.tags) {
+        site.tags = site.tags.filter(t => t !== tag);
+        saveSites();
+        displaySites();
+    }
+}
+
+function renderTags(site) {
+    if (!site.tags || site.tags.length === 0) return '';
+    
+    return `
+        <div class="site-tags">
+            ${site.tags.map(tag => `
+                <span class="tag" style="background-color: ${getTagColor(tag)}">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag(${sites.indexOf(site)}, '${tag}')">×</span>
+                </span>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getTagColor(tag) {
+    const tagColors = {
+        '开发': '#4CAF50',
+        '工具': '#2196F3',
+        '文档': '#FF9800',
+        '娱乐': '#9C27B0',
+        '学习': '#E91E63'
+    };
+    return tagColors[tag] || '#757575';
+} 

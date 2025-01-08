@@ -1,6 +1,6 @@
 {
   "name": "navigation-site",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "个人网站导航工具",
   "main": "server.js",
   "scripts": {
