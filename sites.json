@@ -94,8 +94,17 @@
     },
     {
       "name": "我的导航",
-      "url": "https://www.111baidu.com",
+      "url": "https://1",
       "description": ""
+    },
+    {
+      "name": "示例网站",
+      "url": "https://example.com",
+      "groupIndex": 0,
+      "stats": {
+        "visitCount": 1,
+        "lastVisit": "2024-03-21T10:00:00.000Z"
+      }
     }
   ],
   "groups": [

@@ -4,6 +4,7 @@ let pageTitle = "我的网站导航";
 
 // 从服务器获取数据
 async function loadSites() {
+    showLoading();
     try {
         const response = await fetch('http://localhost:3000/api/sites');
         const data = await response.json();
@@ -33,6 +34,32 @@ async function loadSites() {
         }
     } catch (error) {
         handleError(error, '加载数据');
+    } finally {
+        hideLoading();
+    }
+}
+
+// 添加加载状态管理
+function showLoading() {
+    // 如果没有loading元素，创建一个
+    let loading = document.getElementById('loading');
+    if (!loading) {
+        loading = document.createElement('div');
+        loading.id = 'loading';
+        loading.className = 'loading-overlay';
+        loading.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div class="loading-text">加载中...</div>
+        `;
+        document.body.appendChild(loading);
+    }
+    loading.style.display = 'flex';
+}
+
+function hideLoading() {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.style.display = 'none';
     }
 }
 
@@ -156,8 +183,22 @@ function formatSiteInput(name, url, description) {
     };
 }
 
-// 修改添加网站函数
-async function addSite() {
+/**
+ * 网站数据接口
+ * @typedef {Object} Site
+ * @property {string} name - 网站名称
+ * @property {string} url - 网站地址
+ * @property {string} [description] - 网站描述
+ * @property {number} [groupIndex] - 分组索引
+ */
+
+/**
+ * 添加新网站
+ * @param {Site} siteData - 网站数据
+ * @returns {Promise<void>}
+ * @throws {Error} 当验证失败或保存失败时
+ */
+async function addSite(siteData) {
     try {
         const name = document.getElementById('siteName').value;
         const url = document.getElementById('siteUrl').value;
@@ -205,10 +246,24 @@ async function deleteSite(index) {
     displaySites();
 }
 
+// 1. 防抖处理
+const debounce = (fn, delay) => {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+    };
+};
+
+// 2. 优化搜索功能
+const searchSites = debounce((keyword) => {
+    filterSites(keyword.toLowerCase());
+}, 300);
+
 // 显示网站列表
 function displaySites() {
-    const sitesList = document.getElementById('sitesList');
     const fragment = document.createDocumentFragment();
+    const sitesList = document.getElementById('sitesList');
     
     // 显示未分组的网站
     const ungroupedSites = sites.filter(site => site.groupIndex === undefined);
@@ -257,12 +312,12 @@ function displaySites() {
             fragment.appendChild(groupContainer);
         }
     });
-
-    addDragListeners();
     
-    // 最后一次性更新DOM
     sitesList.innerHTML = '';
     sitesList.appendChild(fragment);
+    
+    // 在添加完所有元素后调用拖拽监听器
+    addDragListeners();
 }
 
 // 创建网站元素的辅助函数
@@ -1206,7 +1261,17 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = message;
-    document.body.appendChild(toast);
+    
+    // 支持多条消息堆叠显示
+    const container = document.querySelector('.toast-container') || 
+        (() => {
+            const c = document.createElement('div');
+            c.className = 'toast-container';
+            document.body.appendChild(c);
+            return c;
+        })();
+    
+    container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 

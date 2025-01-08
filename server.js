@@ -217,8 +217,45 @@ app.get('/api/version', (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log('服务器运行在 http://localhost:3000');
-    // 立即执行一次清理
+// 1. 引入所需模块
+const requestLogger = require('./middleware/requestLogger');
+const errorHandler = require('./middleware/errorHandler');
+const siteRoutes = require('./routes/sites');
+const backupRoutes = require('./routes/backups');
+const rateLimit = require('express-rate-limit');
+const { body, validationResult } = require('express-validator');
+const config = require('./config');
+
+// 2. 使用中间件
+app.use(requestLogger);  // 先注册日志中间件
+
+// 3. 添加请求速率限制
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+}));
+
+// 4. 注册路由
+app.use('/api/sites', siteRoutes);
+app.use('/api/backups', backupRoutes);
+
+// 5. 错误处理中间件放在最后
+app.use(errorHandler);
+
+// 6. 数据验证中间件
+const validateSite = [
+  body('name').trim().isLength({ min: 2 }),
+  body('url').isURL(),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  }
+];
+
+app.listen(config.port, () => {
+    console.log(`服务器运行在 http://localhost:${config.port}`);
     cleanupOldBackups();
 }); 
