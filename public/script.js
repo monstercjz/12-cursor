@@ -2,6 +2,10 @@ let sites = [];
 let groups = [];
 let pageTitle = "我的网站导航";
 
+// 添加新的全局变量
+// const FAVICON_CACHE_KEY = 'favicon_cache';
+// const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7天
+
 // 从服务器获取数据
 async function loadSites() {
     showLoading();
@@ -208,33 +212,47 @@ async function addSite(siteData) {
         
         const siteData = formatSiteInput(name, url, description);
         
-        const icon = await getFavicon(siteData.url);
-        const iconUrl = icon || '/icons/default-icon.png';
+        // 添加加载状态
+        showLoading();
         
-        sites.push({
-            ...siteData,
-            groupIndex,
-            icon: iconUrl,
-            stats: {
-                visitCount: 0,
-                lastVisit: null
+        let iconUrl = '/icons/default-icon.png';
+        
+        // 异步执行 getFavicon
+        setTimeout(async () => {
+            try {
+                const icon = await getFavicon(siteData.url);
+                iconUrl = icon;
+            } catch (error) {
+                console.error('获取图标失败:', error);
+            } finally {
+                sites.push({
+                    ...siteData,
+                    groupIndex,
+                    icon: iconUrl,
+                    stats: {
+                        visitCount: 0,
+                        lastVisit: null
+                    }
+                });
+                
+                // 清理并去重
+                cleanupSites();
+                
+                await saveSites();
+                displaySites();
+                toggleAddForm();
+                
+                // 清空表单
+                document.getElementById('siteName').value = '';
+                document.getElementById('siteUrl').value = '';
+                document.getElementById('siteDesc').value = '';
+                groupSelect.value = '';
+                
+                showToast('添加网站成功', 'success');
+                hideLoading(); // 移除加载状态
             }
-        });
+        }, 0);
         
-        // 清理并去重
-        cleanupSites();
-        
-        await saveSites();
-        displaySites();
-        toggleAddForm();
-        
-        // 清空表单
-        document.getElementById('siteName').value = '';
-        document.getElementById('siteUrl').value = '';
-        document.getElementById('siteDesc').value = '';
-        groupSelect.value = '';
-        
-        showToast('添加网站成功', 'success');
     } catch (error) {
         handleError(error, '添加网站');
     }
@@ -1200,15 +1218,78 @@ document.addEventListener('DOMContentLoaded', () => {
  * @returns {string} 图标URL
  */
 async function getFavicon(url) {
-    try {
-        const domain = new URL(url).hostname;
-        // 尝试获取Google Favicon服务
-        return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-    } catch (error) {
-        console.error('获取favicon失败:', error);
-        return '/default-icon.png';  // 默认图标
+    // const cachedIcon = getCachedFavicon(url);
+    // if (cachedIcon) {
+    //     return cachedIcon;
+    // }
+    
+    let iconUrl = '/icons/default-icon.png';
+    let retries = 0;
+    const maxRetries = 5; // 简化重试次数
+    const domain = new URL(url).hostname;
+    
+    while (retries < maxRetries) {
+        try {
+            // 尝试使用 Google Favicon 服务
+            iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+            const response = await fetch(iconUrl, { mode: 'no-cors' });
+            if (response.ok) {
+                if (response.status === 404) {
+                    console.warn(`Google Favicon 服务返回 404 错误: ${iconUrl}`);
+                    return '/icons/default-icon.png'; // 返回默认图标
+                }
+                // cacheFavicon(url, iconUrl);
+                console.log(`成功获取 Google Favicon: ${iconUrl}`);
+                return iconUrl;
+            }
+            
+            retries++;
+            console.warn(`Google Favicon 服务失败，重试第 ${retries} 次: ${response.status}`);
+            await new Promise(resolve => setTimeout(resolve, 500)); // 延迟重试
+        } catch (error) {
+            console.error('Google Favicon 服务请求失败:', error);
+            retries++;
+            await new Promise(resolve => setTimeout(resolve, 500)); // 延迟重试
+        }
     }
+    
+    // 移除备用服务
+    // try {
+    //     iconUrl = `https://api.faviconkit.com/${domain}/32`;
+    //     const response = await fetch(iconUrl);
+    //     if (response.ok) {
+    //         // cacheFavicon(url, iconUrl);
+    //         console.log(`成功获取备用 Favicon: ${iconUrl}`);
+    //         return iconUrl;
+    //     }
+    //     console.warn(`备用 Favicon 服务失败: ${response.status}`);
+    // } catch (error) {
+    //     console.error('备用 Favicon 服务请求失败:', error);
+    // }
+    
+    console.warn('所有 Favicon 服务均失败，使用默认图标');
+    return iconUrl;
 }
+
+// 从缓存中获取 favicon
+// function getCachedFavicon(url) {
+//     const cache = JSON.parse(localStorage.getItem(FAVICON_CACHE_KEY) || '{}');
+//     const cached = cache[url];
+//     if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
+//         return cached.iconUrl;
+//     }
+//     return null;
+// }
+
+// 缓存 favicon
+// function cacheFavicon(url, iconUrl) {
+//     const cache = JSON.parse(localStorage.getItem(FAVICON_CACHE_KEY) || '{}');
+//     cache[url] = {
+//         iconUrl,
+//         timestamp: Date.now()
+//     };
+//     localStorage.setItem(FAVICON_CACHE_KEY, JSON.stringify(cache));
+// }
 
 // 添加标签相关函数
 function addTag(siteIndex, tag) {

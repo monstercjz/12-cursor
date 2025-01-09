@@ -26,7 +26,11 @@
       "name": "MDN",
       "url": "https://developer.mozilla.org",
       "description": "Web开发文档",
-      "groupIndex": 0
+      "groupIndex": 0,
+      "stats": {
+        "visitCount": 1,
+        "lastVisit": "2025-01-09T05:17:55.008Z"
+      }
     },
     {
       "name": "Stack Overflow",
@@ -95,7 +99,11 @@
     {
       "name": "我的导航",
       "url": "https://1",
-      "description": ""
+      "description": "",
+      "stats": {
+        "visitCount": 1,
+        "lastVisit": "2025-01-09T10:35:47.238Z"
+      }
     },
     {
       "name": "示例网站",
